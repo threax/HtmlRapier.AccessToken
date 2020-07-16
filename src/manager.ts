@@ -58,8 +58,6 @@ export class TokenManager {
     private expirationTick: number;
     private needLoginEvent: events.PromiseEventDispatcher<boolean, TokenManager> = new events.PromiseEventDispatcher<boolean, TokenManager>();
     private queuePromise: ep.ExternalPromise<string> = null;
-    private _alwaysRequestLogin: boolean = false;
-    private _allowServerTokenRefresh: boolean = true;
     private fetcher: Fetcher;
 
     constructor(private tokenPath: string, private _bearerCookieName: string) {
@@ -109,23 +107,20 @@ export class TokenManager {
             this.processCurrentToken();
         }
 
-        //Double check expiration times and refresh if needed
-        const allowTokenRefresh = this.currentToken || this.alwaysRequestLogin; //If we have a token or login is forced a token lookup is allowed
-        if (allowTokenRefresh && this.needsRefresh()) { //If token lookup is allowed and a refresh is needed
+        //Double check expiration times and refresh if needed, this only runs if we already have a token
+        if (this.currentToken && this.needsRefresh()) {
             if (!await this.readServerAccessToken()) {
                 if (!await this.fireNeedLogin()) {
                     this.startTime = undefined;
                     throw new Error("Could not refresh access token or log back in.");
                 }
             }
-        }
 
-        //The way this is structured no matter what happens on the server we read the current cookie state
-        //Its possible no refresh was performed if the user turned that off, but if we had a cookie with a
-        //token, go ahead and return that.
-        this.readCookieAccessToken();
-        if (this.currentToken) {
-            this.processCurrentToken();
+            //Read the cookie again.
+            this.readCookieAccessToken();
+            if (this.currentToken) {
+                this.processCurrentToken();
+            }
         }
     }
 
@@ -155,21 +150,18 @@ export class TokenManager {
     }
 
 
-    ///Read an access token from the server. If the refresh is successful true will be returned. If something goes wrong false will be returned.
+    ///Read an access token from the server. If the refresh is successful true will be returned otherwise false.
     private async readServerAccessToken(): Promise<boolean> {
-        if (this._allowServerTokenRefresh) {
-            const request: RequestInit = {
-                method: "POST",
-                cache: "no-cache",
-                headers: {
-                    "Content-Type": "application/json; charset=UTF-8"
-                },
-                credentials: "include"
-            };
-            const response = await this.fetcher.fetch(this.tokenPath, request);
-            return response.ok;
-        }
-        return true; //Not doing anything means everything is ok.
+        const request: RequestInit = {
+            method: "POST",
+            cache: "no-cache",
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8"
+            },
+            credentials: "include"
+        };
+        const response = await this.fetcher.fetch(this.tokenPath, request);
+        return response.ok;
     }
 
     private clearToken(): void {
@@ -186,30 +178,6 @@ export class TokenManager {
      */
     public get onNeedLogin(): events.EventModifier<events.FuncEventListener<Promise<boolean>, TokenManager>> {
         return this.needLoginEvent.modifier;
-    }
-
-    public get alwaysRequestLogin(): boolean {
-        return this._alwaysRequestLogin;
-    }
-
-    public set alwaysRequestLogin(value: boolean) {
-        this._alwaysRequestLogin = value;
-    }
-
-    public get bearerCookieName(): string {
-        return this._bearerCookieName;
-    }
-
-    public set bearerCookieName(value: string) {
-        this._bearerCookieName = value;
-    }
-
-    public get allowServerTokenRefresh(): boolean {
-        return this._allowServerTokenRefresh;
-    }
-
-    public set allowServerTokenRefresh(value: boolean) {
-        this._allowServerTokenRefresh = value;
     }
 
     private async fireNeedLogin(): Promise<boolean> {
