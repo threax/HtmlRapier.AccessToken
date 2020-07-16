@@ -1,0 +1,12 @@
+{
+  "name": "htmlrapier.accesstoken",
+  "version": "0.0.0",
+  "private": false,
+  "dependencies": {
+    "htmlrapier": ">=23.2.0"
+  },
+  "files": [
+    "src/**/*",
+    "tsimport.json"
+  ]
+}

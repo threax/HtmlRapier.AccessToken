@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "sourceMap": true,
+    "noEmitHelpers": true,
+    "allowJs": true,
+    "target": "es5",
+    "outDir": "obj/tsc",
+    "outFile": "obj/tsbin.js",
+    "module": "amd",
+    "baseUrl": ".",
+    "moduleResolution": "node",
+    "paths": {
+      "hr.*": [
+        "src/*"
+      ],
+      "hr.test.*": [
+        "test/*"
+      ]
+    }
+  },
+  "include": [
+    "src/*",
+    "test\\**\\*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "obj"
+  ],
+  "compileOnSave": true
+}
