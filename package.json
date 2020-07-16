@@ -1,9 +1,9 @@
 {
   "name": "htmlrapier.accesstoken",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": false,
   "dependencies": {
-    "htmlrapier": ">=23.2.0"
+    "htmlrapier": ">=24.0.0"
   },
   "files": [
     "src/**/*",
