@@ -51,6 +51,18 @@ function parseJwt(token: string, options?: any) {
     return JSON.parse(base64UrlDecode(token.split('.')[pos]));
 };
 
+export interface AccessToken {
+    /**
+     * The subject of the token. */
+    sub: string;
+    /**
+     * The start time of the token. */
+    nbf: number;
+    /**
+     * The expiration date of the token. */
+    exp: number;
+}
+
 export class TokenManager {
     private currentToken: string;
     private startTime: number;
@@ -59,6 +71,7 @@ export class TokenManager {
     private needLoginEvent: events.PromiseEventDispatcher<boolean, TokenManager> = new events.PromiseEventDispatcher<boolean, TokenManager>();
     private queuePromise: ep.ExternalPromise<string> = null;
     private fetcher: Fetcher;
+    private tokenObj: AccessToken = null;
 
     constructor(private tokenPath: string, private _bearerCookieName: string) {
         this.fetcher = new winfetch.WindowFetch();
@@ -80,6 +93,12 @@ export class TokenManager {
 
         //Didn't need refresh, return current token.
         return Promise.resolve(this.currentToken);
+    }
+
+    public async getAccessToken(): Promise<AccessToken | null> {
+        //Run getToken to handle the refresh
+        await this.getToken();
+        return this.tokenObj;
     }
 
     private needsRefresh(): boolean {
@@ -125,21 +144,21 @@ export class TokenManager {
     }
 
     private processCurrentToken() {
-        const tokenObj = parseJwt(this.currentToken);
+        this.tokenObj = parseJwt(this.currentToken);
 
         if (this.currentSub !== undefined) {
-            if (this.currentSub !== tokenObj.sub) { //Do not combine ifs
+            if (this.currentSub !== this.tokenObj.sub) { //Do not combine ifs
                 //Subjects do not match, clear tokens
                 this.clearToken();
                 throw new Error("Sub did not match on new token, likely a different user. Aborting refresh.");
             }
         }
         else {
-            this.currentSub = tokenObj.sub;
+            this.currentSub = this.tokenObj.sub;
         }
 
-        this.startTime = tokenObj.nbf;
-        this.expirationTick = (tokenObj.exp - this.startTime) / 2; //After half the token time has expired we will turn it in for another one.
+        this.startTime = this.tokenObj.nbf;
+        this.expirationTick = (this.tokenObj.exp - this.startTime) / 2; //After half the token time has expired we will turn it in for another one.
     }
 
     private readCookieAccessToken() {
