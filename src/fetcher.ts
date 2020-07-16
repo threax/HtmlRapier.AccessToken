@@ -3,26 +3,17 @@
 import { Fetcher } from 'hr.fetcher';
 import * as events from 'hr.eventdispatcher';
 import { IWhitelist } from 'hr.whitelist';
-import { TokenManager } from 'hr.accesstoken.manager'
+import { TokenManager } from 'hr.accesstoken.manager';
 
 export class AccessTokenFetcher extends Fetcher {
-    public static isInstance(t: any): t is AccessTokenFetcher {
-        return (<AccessTokenFetcher>t).onNeedLogin !== undefined
-            && (<AccessTokenFetcher>t).fetch !== undefined;
-    }
-
     private next: Fetcher;
     private accessWhitelist: IWhitelist;
-    private tokenManager: TokenManager;
-    private needLoginEvent: events.PromiseEventDispatcher<boolean, AccessTokenFetcher> = new events.PromiseEventDispatcher<boolean, AccessTokenFetcher>();
     private _alwaysRefreshToken: boolean = false;
     private _useToken: boolean = true;
     private _disableOnNoToken: boolean = true;
 
-    constructor(tokenPath: string, accessWhitelist: IWhitelist, next: Fetcher) {
+    constructor(private tokenManager: TokenManager, accessWhitelist: IWhitelist, next: Fetcher) {
         super();
-        this.tokenManager = new TokenManager(tokenPath, next);
-        this.tokenManager.onNeedLogin.add((t) => this.fireNeedLogin());
         this.next = next;
         this.accessWhitelist = accessWhitelist;
     }
@@ -52,14 +43,6 @@ export class AccessTokenFetcher extends Fetcher {
         return this.next.fetch(url, init);
     }
 
-    /**
-     * This event will fire if the token manager tried to get an access token and failed. You can try
-     * to log the user back in at this point.
-     */
-    public get onNeedLogin(): events.EventModifier<events.FuncEventListener<Promise<boolean>, AccessTokenFetcher>> {
-        return this.needLoginEvent;
-    }
-
     public get alwaysRefreshToken(): boolean {
         return this._alwaysRefreshToken;
     }
@@ -82,43 +65,5 @@ export class AccessTokenFetcher extends Fetcher {
 
     public set disableOnNoToken(value: boolean) {
         this._disableOnNoToken = value;
-    }
-
-    public get alwaysRequestLogin(): boolean {
-        return this.tokenManager.alwaysRequestLogin;
-    }
-
-    public set alwaysRequestLogin(value: boolean) {
-        this.tokenManager.alwaysRequestLogin = value;
-    }
-
-    public get bearerCookieName(): string {
-        return this.tokenManager.bearerCookieName;
-    }
-
-    public set bearerCookieName(value: string) {
-        this.tokenManager.bearerCookieName = value;
-    }
-
-    public get allowServerTokenRefresh(): boolean {
-        return this.tokenManager.allowServerTokenRefresh;
-    }
-
-    public set allowServerTokenRefresh(value: boolean) {
-        this.tokenManager.allowServerTokenRefresh = value;
-    }
-
-    private async fireNeedLogin(): Promise<boolean> {
-        var retryResults = await this.needLoginEvent.fire(this);
-
-        if (retryResults) {
-            for (var i = 0; i < retryResults.length; ++i) {
-                if (retryResults[i]) {
-                    return retryResults[i];
-                }
-            }
-        }
-
-        return false;
     }
 }

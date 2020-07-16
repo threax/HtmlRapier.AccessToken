@@ -1,14 +1,16 @@
 ﻿///<amd-module name="hr.accesstoken.manager"/>
 
 import { Fetcher } from 'hr.fetcher';
+import * as winfetch from 'hr.windowfetch';
 import * as events from 'hr.eventdispatcher';
 import * as ep from 'hr.externalpromise';
 import * as storage from 'hr.storage';
+import * as controller from 'hr.controller';
 
 //From https://github.com/auth0/jwt-decode/blob/master/lib/base64_url_decode.js
 function b64DecodeUnicode(str: string) {
     return decodeURIComponent(atob(str).replace(/(.)/g, function (m, p) {
-        var code = p.charCodeAt(0).toString(16).toUpperCase();
+        let code = p.charCodeAt(0).toString(16).toUpperCase();
         if (code.length < 2) {
             code = '0' + code;
         }
@@ -16,8 +18,8 @@ function b64DecodeUnicode(str: string) {
     }));
 }
 
-function base64_url_decode(str: string) {
-    var output = str.replace(/-/g, "+").replace(/_/g, "/");
+function base64UrlDecode(str: string) {
+    let output = str.replace(/-/g, "+").replace(/_/g, "/");
     switch (output.length % 4) {
         case 0:
             break;
@@ -45,14 +47,9 @@ function parseJwt(token: string, options?: any) {
     }
 
     options = options || {};
-    var pos = options.header === true ? 0 : 1;
-    return JSON.parse(base64_url_decode(token.split('.')[pos]));
+    const pos = options.header === true ? 0 : 1;
+    return JSON.parse(base64UrlDecode(token.split('.')[pos]));
 };
-
-interface IServerTokenResult {
-    headerName: string;
-    accessToken: string;
-}
 
 export class TokenManager {
     private currentToken: string;
@@ -63,11 +60,11 @@ export class TokenManager {
     private needLoginEvent: events.PromiseEventDispatcher<boolean, TokenManager> = new events.PromiseEventDispatcher<boolean, TokenManager>();
     private queuePromise: ep.ExternalPromise<string> = null;
     private _alwaysRequestLogin: boolean = false;
-    private _bearerCookieName: string = null;
     private _allowServerTokenRefresh: boolean = true;
+    private fetcher: Fetcher;
 
-    constructor(private tokenPath: string, private fetcher: Fetcher) {
-
+    constructor(private tokenPath: string, private _bearerCookieName: string) {
+        this.fetcher = new winfetch.WindowFetch();
     }
 
     public getToken(): Promise<string> {
@@ -103,10 +100,6 @@ export class TokenManager {
     }
 
     private async readToken(): Promise<void> {
-        if (!this._bearerCookieName) {
-            throw new Error("You must specify the bearer cookie name to use access token authentication.");
-        }
-
         if (!this.currentToken) {
             //Read the cookie
             this.readCookieAccessToken();
@@ -120,29 +113,25 @@ export class TokenManager {
         //Double check expiration times and refresh if needed
         const allowTokenRefresh = this.currentToken || this.alwaysRequestLogin; //If we have a token or login is forced a token lookup is allowed
         if (allowTokenRefresh && this.needsRefresh()) { //If token lookup is allowed and a refresh is needed
-            try {
-                await this.readServerAccessToken();
-            }
-            catch (err) {
-                //If there was an error, attempt to relogin
-                if (!await this.fireNeedLogin()) { //Got false from fireNeedLogin, which means no login was performed, throw an error
+            if (!await this.readServerAccessToken()) {
+                if (!await this.fireNeedLogin()) {
                     this.startTime = undefined;
                     throw new Error("Could not refresh access token or log back in.");
                 }
             }
+        }
 
-            //The way this is structured no matter what happens on the server we read the current cookie state
-            //Its possible no refresh was performed if the user turned that off, but if we had a cookie with a
-            //token, go ahead and return that.
-            this.readCookieAccessToken();
-            if (this.currentToken) {
-                this.processCurrentToken();
-            }
+        //The way this is structured no matter what happens on the server we read the current cookie state
+        //Its possible no refresh was performed if the user turned that off, but if we had a cookie with a
+        //token, go ahead and return that.
+        this.readCookieAccessToken();
+        if (this.currentToken) {
+            this.processCurrentToken();
         }
     }
 
     private processCurrentToken() {
-        var tokenObj = parseJwt(this.currentToken);
+        const tokenObj = parseJwt(this.currentToken);
 
         if (this.currentSub !== undefined) {
             if (this.currentSub !== tokenObj.sub) { //Do not combine ifs
@@ -166,9 +155,11 @@ export class TokenManager {
         }
     }
 
-    private async readServerAccessToken() {
+
+    ///Read an access token from the server. If the refresh is successful true will be returned. If something goes wrong false will be returned.
+    private async readServerAccessToken(): Promise<boolean> {
         if (this._allowServerTokenRefresh) {
-            let request: RequestInit = {
+            const request: RequestInit = {
                 method: "POST",
                 cache: "no-cache",
                 headers: {
@@ -176,11 +167,10 @@ export class TokenManager {
                 },
                 credentials: "include"
             };
-            var response = await this.fetcher.fetch(this.tokenPath, request);
-            if (response.status < 200 && response.status > 299) {
-                throw new Error("Error feteching token from server.")
-            }
+            const response = await this.fetcher.fetch(this.tokenPath, request);
+            return response.ok;
         }
+        return true; //Not doing anything means everything is ok.
     }
 
     private clearToken(): void {
@@ -228,11 +218,11 @@ export class TokenManager {
     }
 
     private async fireNeedLogin(): Promise<boolean> {
-        var retryResults = await this.needLoginEvent.fire(this);
+        const retryResults = await this.needLoginEvent.fire(this);
 
         if (retryResults) {
             //Take first result that is actually defined
-            for (var i = 0; i < retryResults.length; ++i) {
+            for (let i = 0; i < retryResults.length; ++i) {
                 if (retryResults[i]) {
                     return retryResults[i];
                 }
@@ -243,14 +233,18 @@ export class TokenManager {
     }
 
     private resolveQueue() {
-        var promise = this.queuePromise;
+        const promise = this.queuePromise;
         this.queuePromise = null;
         promise.resolve(this.currentToken);
     }
 
     private rejectQueue(err: any) {
-        var promise = this.queuePromise;
+        const promise = this.queuePromise;
         this.queuePromise = null;
         promise.reject(this.currentToken);
     }
+}
+
+export function addServices(services: controller.ServiceCollection, tokenUrl: string, bearerCookieName: string): void {
+    services.tryAddShared(TokenManager, (s) => new TokenManager(tokenUrl, bearerCookieName));
 }
