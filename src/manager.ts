@@ -97,29 +97,29 @@ export class TokenManager {
     }
 
     private async readToken(): Promise<void> {
+        //If we don't have a token yet, try to read one from the cookie
         if (!this.currentToken) {
-            //Read the cookie
             this.readCookieAccessToken();
         }
 
         //Make sure we managed to get a token, not getting one is valid
         if (this.currentToken) {
             this.processCurrentToken();
-        }
 
-        //Double check expiration times and refresh if needed, this only runs if we already have a token
-        if (this.currentToken && this.needsRefresh()) {
-            if (!await this.readServerAccessToken()) {
-                if (!await this.fireNeedLogin()) {
-                    this.startTime = undefined;
-                    throw new Error("Could not refresh access token or log back in.");
+            //Double check expiration times and refresh if needed
+            if (this.needsRefresh()) {
+                if (!await this.readServerAccessToken()) {
+                    if (!await this.fireNeedLogin()) {
+                        this.startTime = undefined;
+                        throw new Error("Could not refresh access token or log back in.");
+                    }
                 }
-            }
 
-            //Read the cookie again.
-            this.readCookieAccessToken();
-            if (this.currentToken) {
-                this.processCurrentToken();
+                //Read the cookie again for the updated information.
+                this.readCookieAccessToken();
+                if (this.currentToken) {
+                    this.processCurrentToken();
+                }
             }
         }
     }

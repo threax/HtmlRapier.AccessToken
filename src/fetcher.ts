@@ -1,7 +1,6 @@
 ﻿///<amd-module name="hr.accesstoken.fetcher"/>
 
 import { Fetcher } from 'hr.fetcher';
-import * as events from 'hr.eventdispatcher';
 import { IWhitelist } from 'hr.whitelist';
 import { TokenManager } from 'hr.accesstoken.manager';
 
