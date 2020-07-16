@@ -53,7 +53,6 @@ function parseJwt(token: string, options?: any) {
 
 export class TokenManager {
     private currentToken: string;
-    private _headerName: string = "bearer";
     private startTime: number;
     private currentSub: string;
     private expirationTick: number;
@@ -187,10 +186,6 @@ export class TokenManager {
      */
     public get onNeedLogin(): events.EventModifier<events.FuncEventListener<Promise<boolean>, TokenManager>> {
         return this.needLoginEvent.modifier;
-    }
-
-    public get headerName() {
-        return this._headerName;
     }
 
     public get alwaysRequestLogin(): boolean {
