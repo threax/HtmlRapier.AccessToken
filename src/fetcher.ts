@@ -1,8 +1,6 @@
-﻿///<amd-module name="hr.accesstoken.fetcher"/>
-
-import { Fetcher } from 'hr.fetcher';
-import { IWhitelist } from 'hr.whitelist';
-import { TokenManager } from 'hr.accesstoken.manager';
+﻿import { Fetcher } from 'htmlrapier/src/fetcher';
+import { IWhitelist } from 'htmlrapier/src/whitelist';
+import { TokenManager } from './manager';
 
 export class AccessTokenFetcher extends Fetcher {
     constructor(private tokenManager: TokenManager, private accessWhitelist: IWhitelist, private next: Fetcher, private headerName: string = "bearer") {

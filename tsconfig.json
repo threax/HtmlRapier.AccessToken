@@ -5,21 +5,17 @@
     "removeComments": false,
     "sourceMap": true,
     "noEmitHelpers": true,
+    "alwaysStrict": true,
     "allowJs": true,
-    "target": "es5",
+    "target": "es2020",
     "outDir": "obj/tsc",
-    "outFile": "obj/tsbin.js",
-    "module": "amd",
+    "module": "ES2020",
     "baseUrl": ".",
     "moduleResolution": "node",
-    "paths": {
-      "hr.*": [
-        "src/*"
-      ],
-      "hr.test.*": [
-        "test/*"
-      ]
-    }
+    "lib": [
+      "DOM",
+      "ES2020"
+    ]
   },
   "include": [
     "src/*",

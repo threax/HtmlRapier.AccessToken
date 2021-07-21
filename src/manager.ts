@@ -1,11 +1,9 @@
-﻿///<amd-module name="hr.accesstoken.manager"/>
-
-import { Fetcher } from 'hr.fetcher';
-import * as winfetch from 'hr.windowfetch';
-import * as events from 'hr.eventdispatcher';
-import * as ep from 'hr.externalpromise';
-import * as storage from 'hr.storage';
-import * as controller from 'hr.controller';
+﻿import { Fetcher } from 'htmlrapier/src/fetcher';
+import * as winfetch from 'htmlrapier/src/windowfetch';
+import * as events from 'htmlrapier/src/eventdispatcher';
+import * as ep from 'htmlrapier/src/externalpromise';
+import * as storage from 'htmlrapier/src/storage';
+import * as controller from 'htmlrapier/src/controller';
 
 //From https://github.com/auth0/jwt-decode/blob/master/lib/base64_url_decode.js
 function b64DecodeUnicode(str: string) {
