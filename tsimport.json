@@ -1,15 +1,5 @@
 {
-  "compilerOptions": {
-    "paths": {
-      "hr.accesstoken.*": [
-        "src/*"
-      ]
-    }
-  },
   "include": [
     "src/**/*.ts"
-  ],
-  "exclude": [
-
   ]
 }
